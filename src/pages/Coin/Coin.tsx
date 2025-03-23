@@ -2,18 +2,49 @@ import "./Coin.css";
 import { useParams } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
 import { CoinContext } from "../../context/CoinContext";
+import LineChart from "../../components/LineChart/LineChart";
 
-interface ImageResponse {
+interface CoinResponseType {
   image: {
     large: string;
   };
   name: string;
   symbol: string;
+  market_cap_rank: string;
+  market_data: {
+    current_price: {
+      usd: string;
+      inr: string;
+      eur: string;
+    };
+    market_cap: {
+      usd: string;
+      inr: string;
+      eur: string;
+    };
+    high_24h: {
+      usd: string;
+      inr: string;
+      eur: string;
+    };
+    low_24h: {
+      usd: string;
+      inr: string;
+      eur: string;
+    };
+  };
 }
+type PriceType = string[];
+type HistoricalDataType = {
+  name: string;
+  prices: PriceType[];
+};
 
 const Coin = () => {
   const { coinId } = useParams();
-  const [coinData, setCoinData] = useState<ImageResponse>();
+  const [coinData, setCoinData] = useState<CoinResponseType>();
+  const [historicalData, setHistoricalData] =
+    useState<HistoricalDataType | null>(null);
   const { currency } = useContext(CoinContext);
 
   const fetchCoinData = async () => {
@@ -31,10 +62,30 @@ const Coin = () => {
       .catch((err) => console.error(err));
   };
 
+  const fetchHistoricalData = async () => {
+    const options = {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "x-cg-demo-api-key": import.meta.env.VITE_API_KEY,
+      },
+    };
+
+    fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=${currency.name}&days=10&interval=daily`,
+      options
+    )
+      .then((res) => res.json())
+      .then((res) => setHistoricalData(res))
+      .catch((err) => console.error(err));
+  };
+
   useEffect(() => {
     fetchCoinData();
-  }, [currency]);
-  if (coinData)
+    fetchHistoricalData();
+  }, [coinData, historicalData]);
+
+  if (coinData && historicalData)
     return (
       <div className="coin">
         <div className="coin-name">
@@ -44,6 +95,51 @@ const Coin = () => {
               {coinData.name} ({coinData.symbol.toUpperCase()})
             </b>
           </p>
+        </div>
+        <div className="coin-chart">
+          <LineChart historicalData={historicalData} />
+        </div>
+        <div className="coin-info">
+          <ul>
+            <li>Crypto Market Rank</li>
+            <li>{coinData.market_cap_rank}</li>
+          </ul>
+          <ul>
+            <li>Current Price</li>
+            <li>
+              {currency.symbol}
+              {coinData.market_data.current_price[
+                currency.name as keyof typeof coinData.market_data.current_price
+              ].toLocaleString()}
+            </li>
+          </ul>
+          <ul>
+            <li>Market Cap</li>
+            <li>
+              {currency.symbol}
+              {coinData.market_data.market_cap[
+                currency.name as keyof typeof coinData.market_data.market_cap
+              ].toLocaleString()}
+            </li>
+          </ul>
+          <ul>
+            <li>24 Hour high</li>
+            <li>
+              {currency.symbol}
+              {coinData.market_data.high_24h[
+                currency.name as keyof typeof coinData.market_data.market_cap
+              ].toLocaleString()}
+            </li>
+          </ul>
+          <ul>
+            <li>24 Hour low</li>
+            <li>
+              {currency.symbol}
+              {coinData.market_data.low_24h[
+                currency.name as keyof typeof coinData.market_data.market_cap
+              ].toLocaleString()}
+            </li>
+          </ul>
         </div>
       </div>
     );
