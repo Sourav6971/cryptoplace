@@ -1,22 +1,40 @@
 import { useContext, useEffect, useState } from "react";
 import "./Home.css";
 import { CoinContext } from "../../context/CoinContext";
+import { Link } from "react-router-dom";
+
+interface Coin {
+  market_cap_rank: number;
+  image: string;
+  name: string;
+  symbol: string;
+  current_price: number;
+  price_change_percentage_24h: number;
+  market_cap: number;
+  id: string;
+}
+
 const Home = () => {
   const { allCoin, currency } = useContext(CoinContext);
-  interface Coin {
-    market_cap_rank: number;
-    image: string;
-    name: string;
-    symbol: string;
-    current_price: number;
-    price_change_percentage_24h: number;
-    market_cap: number;
-  }
-
+  const [input, setInput] = useState<string>("");
   const [displayCoin, setDisplayCoin] = useState<Coin[]>([]);
+
   useEffect(() => {
     setDisplayCoin(allCoin);
   }, [allCoin]);
+
+  const inputHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(event.target.value);
+    if (event.target.value === "") setDisplayCoin(allCoin);
+  };
+
+  const submitHandler = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const coins = await allCoin.filter((item) => {
+      return item.name.toLowerCase().includes(input.toLowerCase());
+    });
+    setDisplayCoin(coins);
+  };
 
   return (
     <div className="home">
@@ -29,8 +47,19 @@ const Home = () => {
           Welcome to the world's largest cryptocurrency marketplace. Sign up to
           explore more about cryptos
         </p>
-        <form>
-          <input type="text" placeholder="Search crypto.." />
+        <form onSubmit={submitHandler}>
+          <input
+            onChange={inputHandler}
+            type="text"
+            placeholder="Search crypto.."
+            required
+            list="coinlist"
+          />
+          <datalist id="coinlist">
+            {allCoin.map((item, index) => (
+              <option key={index} value={item.name} />
+            ))}
+          </datalist>
           <button type="submit">Search</button>
         </form>
       </div>
@@ -43,7 +72,7 @@ const Home = () => {
           <p className="market-cap">Market Cap</p>
         </div>
         {displayCoin.slice(0, 10).map((item, index) => (
-          <div className="table-layout" key={index}>
+          <Link to={`/coin/${item.id}`} className="table-layout" key={index}>
             <p>{item.market_cap_rank}</p>
             <div>
               <img src={item.image} />
@@ -62,7 +91,7 @@ const Home = () => {
               {currency.symbol}
               {item.market_cap.toLocaleString()}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
